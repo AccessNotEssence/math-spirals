@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +7,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body { margin: 0; padding: 0; background-color: #050508; color: #FFF; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
-        #ui { position: absolute; bottom: 30px; left: 30px; background: rgba(15, 15, 25, 0.85); backdrop-filter: blur(8px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); max-width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+        #ui { position: absolute; bottom: 30px; left: 30px; background: rgba(15, 15, 25, 0.85); backdrop-filter: blur(8px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
         h1 { font-size: 20px; margin: 0 0 8px 0; letter-spacing: 0.5px; }
         .history { font-size: 13px; color: #A0AAB0; margin-bottom: 8px; }
         .formula { font-size: 15px; font-family: 'Courier New', Courier, monospace; font-weight: bold; padding: 6px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 10px; display: inline-block; }
         .desc { font-size: 13px; color: #4FC3F7; line-height: 1.4; margin: 0; }
         .nav { position: absolute; top: 30px; right: 30px; display: flex; gap: 8px; }
-        button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; }
         button:hover { background: rgba(255,255,255,0.25); }
     </style>
 </head>
@@ -27,8 +27,8 @@
 </div>
 
 <div class="nav">
-    <button onclick="prevSpiral()">◀ 上一個</button>
-    <button onclick="nextSpiral()">下一個 ▶</button>
+    <button onclick="prevSpiral()">◀ PREV</button>
+    <button onclick="nextSpiral()">NEXT ▶</button>
 </div>
 
 <script>
@@ -36,18 +36,17 @@ let spirals = [];
 let currentSpiralIndex = 0;
 let t = 0;
 let points = [];
-let secondaryPoints = []; // 用於費馬螺旋的第二條臂
-let scaleFactor = 1;
+let secondaryPoints = [];
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
     
     spirals = [
         {
-            title: "1. Logarithmic Spiral (對數螺旋)",
-            history: "Descartes (1638) / Bernoulli (1692)",
+            title: "1. Logarithmic Spiral",
+            history: "René Descartes (1638) / Jacob Bernoulli (1692)",
             formula: "r(θ) = a · e^(-bθ)",
-            desc: "【特徵：等角自相似】越靠近中心旋轉越密集，形狀在放大下保持完全一致（颱風眼、海螺、星系構造）。",
+            desc: "【Feature: Self-Similarity】Coils denser as it nears the center. Scales recursively without altering geometry (Nautilus shells, hurricanes, galaxies).",
             color: [255, 215, 0], // GOLD
             func: (t) => {
                 let r = 350 * Math.exp(-0.2 * t);
@@ -58,10 +57,10 @@ function setup() {
             hasDual: false
         },
         {
-            title: "2. Hyperbolic Spiral (雙曲螺旋)",
-            history: "Varignon (1704) / Johann Bernoulli",
+            title: "2. Hyperbolic Spiral",
+            history: "Pierre Varignon (1704) / Johann Bernoulli",
             formula: "r(θ) = a / θ",
-            desc: "【特徵：中心無限暴縮 + 外圍漸近線】外部幾乎是一條平移直線，一旦靠近中心會以極高速度捲入！",
+            desc: "【Feature: Asymptotic Outer Line + Infinite Center Collapse】Approaches a horizontal asymptote at infinity, then fiercely plunges into the origin.",
             color: [0, 230, 200], // TEAL
             func: (t) => {
                 let theta = t + 0.8;
@@ -73,15 +72,14 @@ function setup() {
             hasDual: false
         },
         {
-            title: "3. Euler / Clothoid Spiral (歐拉/羊角螺旋)",
-            history: "Euler (1744) / Cornu (1874)",
-            formula: "κ(s) = a · s (曲率與弧長成正比)",
-            desc: "【特徵：雙向 S 型對稱收縮】這是過渡軌道設計的核心，線條從直走向完美平滑地捲入兩個螺旋中心。",
+            title: "3. Euler / Cornu Spiral (Clothoid)",
+            history: "Leonhard Euler (1744) / Marie Alfred Cornu (1874)",
+            formula: "κ(s) = a · s (Curvature ∝ Arc Length)",
+            desc: "【Feature: Dual S-Shape Symmetry】Curvature increases linearly with distance. Crucial in railway transition curves to smooth centrifugal force.",
             color: [186, 104, 200], // PURPLE
             func: (t) => {
-                // Fresnel 積分近似，呈現經典 Clothoid 雙捲特徵
                 let scale = 250;
-                let s = t - 4; // 讓 t 從負到正過渡
+                let s = t - 4;
                 let x = scale * (s - Math.pow(s, 3)/6 + Math.pow(s, 5)/120);
                 let y = scale * (Math.pow(s, 2)/2 - Math.pow(s, 4)/24);
                 return { x: x * 0.3, y: y * 0.3 };
@@ -91,14 +89,14 @@ function setup() {
             hasDual: false
         },
         {
-            title: "4. Archimedean Spiral (阿基米德螺旋)",
+            title: "4. Archimedean Spiral",
             history: "Archimedes of Syracuse (c. 225 BC)",
             formula: "r(θ) = a + bθ",
-            desc: "【特徵：絕對等間距】圈與圈之間的距離永遠維持常數！就像捲尺、蚊香或唱片軌道一樣均勻。",
+            desc: "【Feature: Constant Separation Distance】Successive turnings have a constant separation distance. Found in vinyl records, coiled ropes, and scroll chucks.",
             color: [255, 152, 0], // ORANGE
             func: (t) => {
                 let max_t = 10 * Math.PI;
-                let theta = max_t - t; // 向心進攻
+                let theta = max_t - t;
                 let r = 12 * theta;
                 return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
             },
@@ -107,10 +105,10 @@ function setup() {
             hasDual: false
         },
         {
-            title: "5. Fermat's Spiral (費馬螺旋)",
+            title: "5. Fermat's Spiral",
             history: "Pierre de Fermat (1636)",
-            formula: "r² = a²θ  (±r 雙臂對稱)",
-            desc: "【特徵：雙臂拋物線中心交織】擁有正負兩個對稱分支，中心呈反向交疊（向日葵種子的排列基礎）。",
+            formula: "r² = a²θ (Dual Parabolic Arms)",
+            desc: "【Feature: Symmetrical Parabolic Dual Arms】Symmetric about the origin with two opposing branches. Forms the mathematical basis for sunflower seed packing.",
             color: [244, 67, 54], // RED
             func: (t, isNegative = false) => {
                 let max_t = 8 * Math.PI;
@@ -129,19 +127,19 @@ function setup() {
 }
 
 function draw() {
-    background(5, 5, 8, 30); // 柔和動態殘影
+    background(5, 5, 8, 30);
     translate(width / 2, height / 2);
 
     let current = spirals[currentSpiralIndex];
     let sColor = current.color;
 
-    // 1. 繪製固定輔助座標軸（協助看出數學特徵差異）
+    // Draw reference axes
     stroke(255, 255, 255, 15);
     strokeWeight(1);
     line(-width/2, 0, width/2, 0);
     line(0, -height/2, 0, height/2);
 
-    // 2. 繪製主軌跡
+    // Draw primary trajectory
     noFill();
     stroke(sColor[0], sColor[1], sColor[2], 200);
     strokeWeight(2.5);
@@ -150,7 +148,7 @@ function draw() {
     for (let p of points) vertex(p.x, p.y);
     endShape();
 
-    // 如果有雙臂 (費馬螺旋)
+    // Draw secondary arm if Fermat
     if (current.hasDual) {
         stroke(255, 255, 255, 180);
         beginShape();
@@ -158,7 +156,7 @@ function draw() {
         endShape();
     }
 
-    // 3. 計算動態生成點
+    // Dynamic dot animation
     if (t <= current.tRange[1]) {
         let pos = current.func(t, false);
         points.push(pos);
@@ -168,7 +166,6 @@ function draw() {
             secondaryPoints.push(pos2);
         }
 
-        // 動態光點
         fill(255);
         noStroke();
         ellipse(pos.x, pos.y, 8, 8);
