@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centripetal Spirals Showcase (p5.js)</title>
+    <!-- 引用 p5.js 庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #000; overflow: hidden; color: white; font-family: sans-serif; }
+        #ui { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; max-width: 300px; }
+        h1 { font-size: 18px; color: #81D4FA; margin-top: 0; }
+        .formula { font-style: italic; color: #FFF59D; margin-bottom: 5px; }
+        .history { font-size: 12px; color: #E0E0E0; margin-bottom: 15px;}
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1 id="spiral-title">Initializing...</h1>
+    <p class="history" id="spiral-history"></p>
+    <p class="formula" id="spiral-formula"></p>
+</div>
+
+<script>
+let spirals = [];
+let currentSpiralIndex = 0;
+let t = 0;
+let points = [];
+let dot;
+
+// 定義數學螺旋算式
+const LOG_SPIRAL = {
+    title: "1. Logarithmic / Bernoulli Spiral",
+    history: "René Descartes (1638) / Jacob Bernoulli (1692)",
+    formula: "r(θ) = a * e^(-bθ)",
+    color: [255, 215, 0], // GOLD
+    // 運算函數：給定 theta (t)，返回畫布座標 {x, y}
+    func: (t) => {
+        let a = 200; // 初始半徑
+        let b = 0.15; // 縮合係數
+        let r = a * Math.exp(-b * t);
+        return { x: r * Math.cos(t), y: r * Math.sin(t) };
+    },
+    tRange: [0, 8 * Math.PI],
+    tSpeed: 0.02
+};
+
+const HYP_SPIRAL = {
+    title: "2. Hyperbolic Spiral",
+    history: "Pierre Varignon (1704) / Johann Bernoulli",
+    formula: "r(θ) = a / θ",
+    color: [0, 128, 128], // TEAL
+    func: (t) => {
+        let a = 800; // 系數
+        let theta = t + 1.5; // 避免 theta 為 0
+        let r = a / theta;
+        return { x: r * Math.cos(t), y: r * Math.sin(t) };
+    },
+    tRange: [0, 12 * Math.PI],
+    tSpeed: 0.05
+};
+
+// 由於 Euler Spiral 涉及積分，JS 即時計算較複雜，這裡使用簡化近似版
+const EULER_SPIRAL = {
+    title: "3. Euler / Cornu Spiral (Approx.)",
+    history: "Leonhard Euler (1744) / Marie Alfred Cornu (1874)",
+    formula: "κ(s) = a * s (Curvature prop. to length)",
+    color: [147, 112, 219], // PURPLE
+    func: (t) => {
+        // 近似：結合對數縮合與二次方旋轉
+        let r = 150 * Math.exp(-0.05 * t);
+        let theta = (t * t) / 10;
+        return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
+    },
+    tRange: [0, 10 * Math.PI],
+    tSpeed: 0.03
+};
+
+const ARCH_SPIRAL = {
+    title: "4. Archimedean Spiral",
+    history: "Archimedes of Syracuse (c. 225 BC)",
+    formula: "r(θ) = a + bθ",
+    color: [255, 165, 0], // ORANGE
+    func: (t) => {
+        let b = 8; // 間距係數
+        // Manim 是向心，所以我們讓 t 從大變小，或讓初始 r 很大
+        // 這裡採用向心動態：從外部向中心捲曲
+        let max_t = 12 * Math.PI;
+        let theta = max_t - t;
+        let r = b * theta;
+        return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
+    },
+    tRange: [0, 12 * Math.PI],
+    tSpeed: 0.06
+};
+
+const FERMAT_SPIRAL = {
+    title: "5. Fermat's Spiral",
+    history: "Pierre de Fermat (1636)",
+    formula: "r² = a²θ",
+    color: [220, 20, 60], // RED
+    func: (t) => {
+        let a = 40; // 系數
+        let max_t = 10 * Math.PI;
+        let theta = max_t - t;
+        // 繪製其中一個分臂
+        let r = a * Math.sqrt(theta);
+        return { x: r * Math.cos(theta), y: r * Math.sin(theta) };
+    },
+    tRange: [0, 10 * Math.PI],
+    tSpeed: 0.05
+};
+
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+    background(0);
+    spirals = [LOG_SPIRAL, HYP_SPIRAL, EULER_SPIRAL, ARCH_SPIRAL, FERMAT_SPIRAL];
+    resetSpiral();
+}
+
+function draw() {
+    background(0, 20); // 加上半透明背景，製造殘影效果
+    translate(width / 2, height / 2); // 將原點移到畫面中心
+
+    let current = spirals[currentSpiralIndex];
+    let sColor = current.color;
+
+    // 1. 繪製已經畫好的軌跡
+    noFill();
+    stroke(sColor[0], sColor[1], sColor[2], 150); // 半透明軌跡
+    strokeWeight(2);
+    beginShape();
+    for (let p of points) {
+        vertex(p.x, p.y);
+    }
+    endShape();
+
+    // 2. 計算並繪製當前動態點
+    if (t <= current.tRange[1]) {
+        let pos = current.func(t);
+        points.push(pos); // 將新點加入軌跡
+        dot = pos;
+
+        // 繪製當前的向心光點
+        fill(255, 100, 100); // 紅色向心光點
+        noStroke();
+        ellipse(dot.x, dot.y, 12, 12);
+
+        t += current.tSpeed; // 增加時間參數
+    } else {
+        // 動態結束，等待一段時間後切換下一個螺旋
+        fill(current.color);
+        ellipse(dot.x, dot.y, 8, 8); // 定格終點
+        
+        // 延時切換邏輯 (簡單實現 self.wait(2))
+        if (frameCount % 180 === 0) { 
+            nextSpiral();
+        }
+    }
+}
+
+function resetSpiral() {
+    t = spirals[currentSpiralIndex].tRange[0];
+    points = [];
+    
+    // 更新 UI 文字
+    let current = spirals[currentSpiralIndex];
+    document.getElementById('spiral-title').innerText = current.title;
+    document.getElementById('spiral-history').innerText = current.history;
+    document.getElementById('spiral-formula').innerText = current.formula;
+    
+    background(0); // 清空畫面
+}
+
+function nextSpiral() {
+    currentSpiralIndex = (currentSpiralIndex + 1) % spirals.length;
+    resetSpiral();
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    background(0);
+}
+</script>
+
+</body>
+</html>
